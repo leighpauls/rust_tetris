@@ -2,7 +2,7 @@ use block::Block;
 use graphics::Context;
 use field::FieldDrawParams;
 use opengl_graphics::GlGraphics;
-use Trans2D;
+use trans2d::Trans2D;
 use std::ops::Add;
 
 pub enum RotDir {
@@ -46,6 +46,50 @@ impl Shape {
             &Shape::T(ref r) => Shape::T(r.rotate(dir)),
         }
     }
+
+    fn block_offsets(&self) -> [Trans2D; 4] {
+
+        fn b(positions: [(i32, i32); 4]) -> [Trans2D; 4] {
+            [Trans2D::from_tup(positions[0]),
+             Trans2D::from_tup(positions[1]),
+             Trans2D::from_tup(positions[2]),
+             Trans2D::from_tup(positions[3])]
+        }
+
+        match self {
+            &Shape::O => b([(0, 0), (0, -1), (1, 0), (1, -1)]),
+            &Shape::I(ref r) => {
+                match r {
+                    &Rot2::Start => b([(-1, 0), (0, 0), (1, 0), (2, 0)]),
+                    &Rot2::Reverse => b([(0, 1), (0, 0), (0, -2), (0, -2)]),
+                }
+            }
+            &Shape::Z(_) => b([(0, 0), (0, -1), (1, 0), (1, -1)]),
+            &Shape::S(_) => b([(0, 0), (0, -1), (1, 0), (1, -1)]),
+            &Shape::L(_) => b([(0, 0), (0, -1), (1, 0), (1, -1)]),
+            &Shape::J(_) => b([(0, 0), (0, -1), (1, 0), (1, -1)]),
+            &Shape::T(ref r) => {
+                match r {
+                    &Rot4::Start => b([(-1, 0), (0, 0), (1, 0), (0, -1)]),
+                    &Rot4::CW => b([(0, -1), (0, 0), (0, 1), (1, 0)]),
+                    &Rot4::Reverse => b([(-1, 0), (0, 0), (1, 0), (0, 1)]),
+                    &Rot4::CCW => b([(0, -1), (0, 0), (0, 1), (-1, 0)]),
+                }
+            }
+        }
+    }
+
+    fn default_rotation(&self) -> Shape {
+        match self {
+            &Shape::O => Shape::O,
+            &Shape::I(_) => Shape::I(Rot2::Start),
+            &Shape::Z(_) => Shape::Z(Rot2::Start),
+            &Shape::S(_) => Shape::S(Rot2::Start),
+            &Shape::L(_) => Shape::L(Rot4::Start),
+            &Shape::J(_) => Shape::J(Rot4::Start),
+            &Shape::T(_) => Shape::T(Rot4::Start),
+        }
+    }
 }
 
 impl Rot2 {
@@ -81,36 +125,12 @@ impl Rot4 {
     }
 }
 
-fn block_offsets(shape: &Shape) -> [Trans2D; 4] {
-    match shape {
-        &Shape::O => [(0, 0), (0, -1), (1, 0), (1, -1)],
-        &Shape::I(ref r) => {
-            match r {
-                &Rot2::Start => [(-1, 0), (0, 0), (1, 0), (2, 0)],
-                &Rot2::Reverse => [(0, 1), (0, 0), (0, -2), (0, -2)],
-            }
-        }
-        &Shape::Z(_) => [(0, 0), (0, -1), (1, 0), (1, -1)],
-        &Shape::S(_) => [(0, 0), (0, -1), (1, 0), (1, -1)],
-        &Shape::L(_) => [(0, 0), (0, -1), (1, 0), (1, -1)],
-        &Shape::J(_) => [(0, 0), (0, -1), (1, 0), (1, -1)],
-        &Shape::T(ref r) => {
-            match r {
-                &Rot4::Start => [(-1, 0), (0, 0), (1, 0), (0, -1)],
-                &Rot4::CW => [(0, -1), (0, 0), (0, 1), (1, 0)],
-                &Rot4::Reverse => [(-1, 0), (0, 0), (1, 0), (0, 1)],
-                &Rot4::CCW => [(0, -1), (0, 0), (0, 1), (-1, 0)],
-            }
-        }
-    }
-}
 
-fn new_blocks_for_offsets(offsets: [Trans2D; 4]) -> [Block; 4] {
-    let origin = (4, 1);
-    [Block::from_trans(offsets[0], origin),
-     Block::from_trans(offsets[1], origin),
-     Block::from_trans(offsets[2], origin),
-     Block::from_trans(offsets[3], origin)]
+fn new_blocks_for_offsets(offsets: &[Trans2D; 4]) -> [Block; 4] {
+    [Block::new(offsets[0].clone()),
+     Block::new(offsets[1].clone()),
+     Block::new(offsets[2].clone()),
+     Block::new(offsets[3].clone())]
 }
 
 pub struct Tetromino {
@@ -122,7 +142,7 @@ impl Tetromino {
     pub fn new_t() -> Tetromino {
         let shape = Shape::T(Rot4::Start);
         Tetromino {
-            blocks: new_blocks_for_offsets(block_offsets(&shape)),
+            blocks: new_blocks_for_offsets(&shape.block_offsets()),
             shape: shape,
         }
     }
@@ -139,21 +159,39 @@ impl Tetromino {
         }
     }
 
-    pub fn rotate_blocks(&mut self, dir: RotDir) {
-        let cur_offsets = block_offsets(&self.shape);
-        let b = self.blocks[0].pos();
-        let c = cur_offsets[0];
-        let origin = (b.0 - c.0, b.1 - c.1);
+    pub fn jump_to(&mut self, new_origin: &Trans2D) {
+        let old_origin = self.origin();
+        self.move_blocks(&new_origin.trans(&old_origin.invert()));
+    }
 
-        let new_shape = self.shape.rotate(dir);
-        let new_offsets = block_offsets(&new_shape);
-        for i in 0..4 {
-            self.blocks[i].jump_to(new_offsets[i], origin);
-        }
-        self.shape = new_shape;
+    pub fn rotate_blocks(&mut self, dir: RotDir) {
+        let mut new_shape = self.shape.rotate(dir);
+        let origin = &self.origin();
+        self.new_shape_origin(new_shape, origin);
+    }
+
+    pub fn reset_pos_rot(&mut self, new_origin: &Trans2D) {
+        let mut new_shape = self.shape.default_rotation();
+        self.new_shape_origin(new_shape, new_origin);
     }
 
     pub fn blocks(&self) -> &[Block; 4] {
         &self.blocks
+    }
+
+    fn origin(&self) -> Trans2D {
+        let cur_offsets = self.shape.block_offsets();
+        let b = self.blocks[0].pos();
+        let c = &cur_offsets[0];
+        b.trans(&c.invert())
+    }
+
+    fn new_shape_origin(&mut self, new_shape: Shape, new_origin: &Trans2D) {
+        let old_origin = self.origin();
+        let new_offsets = new_shape.block_offsets();
+        for i in 0..4 {
+            self.blocks[i].jump_to(&new_offsets[i], new_origin);
+        }
+        self.shape = new_shape;
     }
 }

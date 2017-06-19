@@ -7,25 +7,19 @@ use graphics::types::Color;
 use field::FieldDrawParams;
 
 use RED;
-use Trans2D;
+use trans2d::Trans2D;
 
 #[derive(Clone)]
 pub struct Block {
     color: Color,
-    x: i32,
-    y: i32,
+    pos : Trans2D,
 }
 
 impl Block {
-    pub fn from_trans(location: Trans2D, origin: Trans2D) -> Block {
-        Self::new(location.0 + origin.0, location.1 + origin.1)
-    }
-
-    pub fn new(x: i32, y: i32) -> Block {
+    pub fn new(pos: Trans2D) -> Block {
         Block {
             color: RED,
-            x: x,
-            y: y,
+            pos : pos,
         }
     }
 
@@ -35,23 +29,21 @@ impl Block {
                   rectangle::square(0.0, 0.0, params.block_size),
                   c.transform
                       .trans(params.x, params.y)
-                      .trans(self.x as f64 * params.block_size,
-                             self.y as f64 * params.block_size),
+                      .trans(self.pos.x as f64 * params.block_size,
+                             self.pos.y as f64 * params.block_size),
                   gl);
 
     }
 
     pub fn move_block(&mut self, trans: &Trans2D) {
-        self.x += trans.0;
-        self.y += trans.1;
+        self.pos = self.pos.trans(trans);
     }
 
-    pub fn jump_to(&mut self, location: Trans2D, origin: Trans2D) {
-        self.x = location.0 + origin.0;
-        self.y = location.1 + origin.1;
+    pub fn jump_to(&mut self, location: &Trans2D, origin: &Trans2D) {
+        self.pos = origin.trans(location);
     }
 
-    pub fn pos(&self) -> Trans2D {
-        (self.x, self.y)
+    pub fn pos(&self) -> &Trans2D {
+        &self.pos
     }
 }

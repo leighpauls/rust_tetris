@@ -14,7 +14,7 @@ use field::Field;
 use tetronimo::RotDir;
 
 use GREEN;
-use Trans2D;
+use trans2d::Trans2D;
 
 pub struct App {
     gl: GlGraphics,
@@ -45,12 +45,13 @@ impl App {
 
             match key {
                 &Key::Space => self.field.new_cur_tetromino(),
-                &Key::Up => self.field.move_block(&(0, -1)),
-                &Key::Down => self.field.move_block(&(0, 1)),
-                &Key::Left => self.field.move_block(&(-1, 0)),
-                &Key::Right => self.field.move_block(&(1, 0)),
-                &Key::Z => self.field.rotate_block(RotDir::CCW),
-                &Key::X => self.field.rotate_block(RotDir::CW),
+                &Key::Up => self.field.move_tetromino(&Trans2D::new(0, -1)),
+                &Key::Down => self.field.move_tetromino(&Trans2D::new(0, 1)),
+                &Key::Left => self.field.move_tetromino(&Trans2D::new(-1, 0)),
+                &Key::Right => self.field.move_tetromino(&Trans2D::new(1, 0)),
+                &Key::Z => self.field.rotate_tetromino(RotDir::CCW),
+                &Key::X => self.field.rotate_tetromino(RotDir::CW),
+                &Key::C => self.field.stash_tetromino(),
                 _ => (),
             }
         }

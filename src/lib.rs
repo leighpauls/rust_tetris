@@ -3,6 +3,7 @@ mod app;
 mod block;
 mod field;
 mod tetronimo;
+mod trans2d;
 
 extern crate glutin_window;
 extern crate graphics;
@@ -16,6 +17,7 @@ use glutin_window::GlutinWindow as Window;
 use opengl_graphics::OpenGL;
 use graphics::types::Color;
 use std::convert::From;
+use std::ops::Add;
 
 use app::App;
 
@@ -23,7 +25,6 @@ const GREEN: Color = [0.0, 1.0, 0.0, 1.0];
 const RED: Color = [1.0, 0.0, 0.0, 1.0];
 const BLACK: Color = [0.0, 0.0, 0.0, 1.0];
 
-pub type Trans2D = (i32, i32);
 
 pub fn main() {
     let opengl = OpenGL::V3_2;
