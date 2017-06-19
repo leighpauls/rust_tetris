@@ -87,7 +87,7 @@ impl Field {
 
     pub fn init_field(&mut self) {
         for i in 0..5 {
-            let mut new_tet = Tetromino::new_t();
+            let mut new_tet = Tetromino::new_l();
             new_tet.jump_to(&preview_block_start_pos());
             self.preview_tets.push(new_tet);
         }
