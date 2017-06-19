@@ -16,8 +16,6 @@ use piston::input::{RenderEvent, UpdateEvent, PressEvent};
 use glutin_window::GlutinWindow as Window;
 use opengl_graphics::OpenGL;
 use graphics::types::Color;
-use std::convert::From;
-use std::ops::Add;
 
 use app::App;
 

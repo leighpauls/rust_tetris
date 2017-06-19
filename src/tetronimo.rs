@@ -3,7 +3,6 @@ use graphics::Context;
 use field::FieldDrawParams;
 use opengl_graphics::GlGraphics;
 use trans2d::Trans2D;
-use std::ops::Add;
 
 pub enum RotDir {
     CW,
@@ -15,104 +14,6 @@ enum Rot4 {
     CW,
     Reverse,
     CCW,
-}
-
-enum Shape {
-    O,
-    I(Rot4),
-    Z(Rot4),
-    S(Rot4),
-    L(Rot4),
-    J(Rot4),
-    T(Rot4),
-}
-
-impl Shape {
-    fn rotate(&self, dir: RotDir) -> Shape {
-        match self {
-            &Shape::O => Shape::O,
-            &Shape::I(ref r) => Shape::I(r.rotate(dir)),
-            &Shape::Z(ref r) => Shape::Z(r.rotate(dir)),
-            &Shape::S(ref r) => Shape::S(r.rotate(dir)),
-            &Shape::L(ref r) => Shape::L(r.rotate(dir)),
-            &Shape::J(ref r) => Shape::J(r.rotate(dir)),
-            &Shape::T(ref r) => Shape::T(r.rotate(dir)),
-        }
-    }
-
-    fn block_offsets(&self) -> [Trans2D; 4] {
-
-        fn b(positions: [(i32, i32); 4]) -> [Trans2D; 4] {
-            [Trans2D::from_tup(positions[0]),
-             Trans2D::from_tup(positions[1]),
-             Trans2D::from_tup(positions[2]),
-             Trans2D::from_tup(positions[3])]
-        }
-
-        match self {
-            &Shape::O => b([(0, 0), (0, -1), (1, 0), (1, -1)]),
-            &Shape::I(ref r) => {
-                match r {
-                    &Rot4::Start => b([(-1, 0), (0, 0), (1, 0), (2, 0)]),
-                    &Rot4::CW => b([(1, -1), (1, 0), (1, 1), (1, 2)]),
-                    &Rot4::Reverse => b([(-1, 1), (0, 1), (1, 1), (2, 1)]),
-                    &Rot4::CCW => b([(0, -1), (0, 0), (0, 1), (0, 2)]),
-                }
-            },
-            &Shape::Z(ref r) => {
-                match r {
-                    &Rot4::Start => b([(-1, -1), (0, -1), (0, 0), (1, 0)]),
-                    &Rot4::CW => b([(1, -1), (1, 0), (0, 0), (0, 1)]),
-                    &Rot4::Reverse => b([(-1, 0), (0, 0), (0, 1), (1, 1)]),
-                    &Rot4::CCW => b([(0, -1), (0, 0), (-1, 0), (-1, 1)]),
-                }
-            },
-            &Shape::S(ref r) => {
-                match r {
-                    &Rot4::Start => b([(-1, 0), (0, 0), (0, -1), (1, -1)]),
-                    &Rot4::CW => b([(0, -1), (0, 0), (1, 0), (1, 1)]),
-                    &Rot4::Reverse => b([(-1, 1), (0, 1), (0, 0), (1, 0)]),
-                    &Rot4::CCW => b([(-1, -1), (-1, 0), (0, 0), (0, 1)]),
-                }
-            },
-            &Shape::L(ref r) => {
-                match r {
-                    &Rot4::Start => b([(-1, 0), (0, 0), (1, 0), (1, -1)]),
-                    &Rot4::CW => b([(0, -1), (0, 0), (0, 1), (1, 1)]),
-                    &Rot4::Reverse => b([(-1, 1), (-1, 0), (0, 0), (1, 0)]),
-                    &Rot4::CCW => b([(-1, -1), (0, -1), (0, 0), (0, 1)]),
-                }
-            },
-            &Shape::J(ref r) => {
-                match r {
-                    &Rot4::Start => b([(-1, -1), (-1, 0), (0, 0), (1, 0)]),
-                    &Rot4::CW => b([(1, -1), (0, -1), (0, 0), (0, 1)]),
-                    &Rot4::Reverse => b([(-1, 0), (0, 0), (1, 0), (1, 1)]),
-                    &Rot4::CCW => b([(-1, 1), (0, 1), (0, 0), (0, -1)]),
-                }
-            },
-            &Shape::T(ref r) => {
-                match r {
-                    &Rot4::Start => b([(-1, 0), (0, 0), (1, 0), (0, -1)]),
-                    &Rot4::CW => b([(0, -1), (0, 0), (0, 1), (1, 0)]),
-                    &Rot4::Reverse => b([(-1, 0), (0, 0), (1, 0), (0, 1)]),
-                    &Rot4::CCW => b([(0, -1), (0, 0), (0, 1), (-1, 0)]),
-                }
-            }
-        }
-    }
-
-    fn default_rotation(&self) -> Shape {
-        match self {
-            &Shape::O => Shape::O,
-            &Shape::I(_) => Shape::I(Rot4::Start),
-            &Shape::Z(_) => Shape::Z(Rot4::Start),
-            &Shape::S(_) => Shape::S(Rot4::Start),
-            &Shape::L(_) => Shape::L(Rot4::Start),
-            &Shape::J(_) => Shape::J(Rot4::Start),
-            &Shape::T(_) => Shape::T(Rot4::Start),
-        }
-    }
 }
 
 impl Rot4 {
@@ -139,6 +40,15 @@ impl Rot4 {
     }
 }
 
+enum Shape {
+    O,
+    I,
+    Z,
+    S,
+    L,
+    J,
+    T,
+}
 
 fn new_blocks_for_offsets(offsets: &[Trans2D; 4]) -> [Block; 4] {
     [Block::new(offsets[0].clone()),
@@ -150,58 +60,100 @@ fn new_blocks_for_offsets(offsets: &[Trans2D; 4]) -> [Block; 4] {
 pub struct Tetromino {
     blocks: [Block; 4],
     shape: Shape,
+    rot: Rot4,
+}
+
+fn block_offsets(shape: &Shape, rot: &Rot4) -> [Trans2D; 4] {
+    fn b(positions: [(i32, i32); 4]) -> [Trans2D; 4] {
+        [Trans2D::from_tup(positions[0]),
+         Trans2D::from_tup(positions[1]),
+         Trans2D::from_tup(positions[2]),
+         Trans2D::from_tup(positions[3])]
+    }
+
+    match *shape {
+        Shape::O => b([(0, 0), (0, -1), (1, 0), (1, -1)]),
+        Shape::I => {
+            match *rot {
+                Rot4::Start => b([(-1, 0), (0, 0), (1, 0), (2, 0)]),
+                Rot4::CW => b([(1, -1), (1, 0), (1, 1), (1, 2)]),
+                Rot4::Reverse => b([(-1, 1), (0, 1), (1, 1), (2, 1)]),
+                Rot4::CCW => b([(0, -1), (0, 0), (0, 1), (0, 2)]),
+            }
+        }
+        Shape::Z => {
+            match *rot {
+                Rot4::Start => b([(-1, -1), (0, -1), (0, 0), (1, 0)]),
+                Rot4::CW => b([(1, -1), (1, 0), (0, 0), (0, 1)]),
+                Rot4::Reverse => b([(-1, 0), (0, 0), (0, 1), (1, 1)]),
+                Rot4::CCW => b([(0, -1), (0, 0), (-1, 0), (-1, 1)]),
+            }
+        }
+        Shape::S => {
+            match *rot {
+                Rot4::Start => b([(-1, 0), (0, 0), (0, -1), (1, -1)]),
+                Rot4::CW => b([(0, -1), (0, 0), (1, 0), (1, 1)]),
+                Rot4::Reverse => b([(-1, 1), (0, 1), (0, 0), (1, 0)]),
+                Rot4::CCW => b([(-1, -1), (-1, 0), (0, 0), (0, 1)]),
+            }
+        }
+        Shape::L => {
+            match *rot {
+                Rot4::Start => b([(-1, 0), (0, 0), (1, 0), (1, -1)]),
+                Rot4::CW => b([(0, -1), (0, 0), (0, 1), (1, 1)]),
+                Rot4::Reverse => b([(-1, 1), (-1, 0), (0, 0), (1, 0)]),
+                Rot4::CCW => b([(-1, -1), (0, -1), (0, 0), (0, 1)]),
+            }
+        }
+        Shape::J => {
+            match *rot {
+                Rot4::Start => b([(-1, -1), (-1, 0), (0, 0), (1, 0)]),
+                Rot4::CW => b([(1, -1), (0, -1), (0, 0), (0, 1)]),
+                Rot4::Reverse => b([(-1, 0), (0, 0), (1, 0), (1, 1)]),
+                Rot4::CCW => b([(-1, 1), (0, 1), (0, 0), (0, -1)]),
+            }
+        }
+        Shape::T => {
+            match *rot {
+                Rot4::Start => b([(-1, 0), (0, 0), (1, 0), (0, -1)]),
+                Rot4::CW => b([(0, -1), (0, 0), (0, 1), (1, 0)]),
+                Rot4::Reverse => b([(-1, 0), (0, 0), (1, 0), (0, 1)]),
+                Rot4::CCW => b([(0, -1), (0, 0), (0, 1), (-1, 0)]),
+            }
+        }
+    }
 }
 
 impl Tetromino {
-    pub fn new_o() -> Self {
-        let shape = Shape::O;
+    fn new(shape: Shape) -> Self {
+        let rot = Rot4::Start;
         Self {
-            blocks: new_blocks_for_offsets(&shape.block_offsets()),
+            blocks: new_blocks_for_offsets(&block_offsets(&shape, &rot)),
             shape: shape,
+            rot: rot,
         }
+    }
+
+    pub fn new_o() -> Self {
+        Self::new(Shape::O)
     }
     pub fn new_i() -> Self {
-        let shape = Shape::I(Rot4::Start);
-        Self {
-            blocks: new_blocks_for_offsets(&shape.block_offsets()),
-            shape: shape,
-        }
+        Self::new(Shape::I)
     }
     pub fn new_z() -> Self {
-        let shape = Shape::Z(Rot4::Start);
-        Self {
-            blocks: new_blocks_for_offsets(&shape.block_offsets()),
-            shape: shape,
-        }
+        Self::new(Shape::Z)
     }
     pub fn new_s() -> Self {
-        let shape = Shape::S(Rot4::Start);
-        Self {
-            blocks: new_blocks_for_offsets(&shape.block_offsets()),
-            shape: shape,
-        }
+        Self::new(Shape::S)
     }
     pub fn new_l() -> Self {
-        let shape = Shape::L(Rot4::Start);
-        Self {
-            blocks: new_blocks_for_offsets(&shape.block_offsets()),
-            shape: shape,
-        }
+        Self::new(Shape::L)
     }
     pub fn new_j() -> Self {
-        let shape = Shape::J(Rot4::Start);
-        Self {
-            blocks: new_blocks_for_offsets(&shape.block_offsets()),
-            shape: shape,
-        }
+        Self::new(Shape::J)
     }
-    
     pub fn new_t() -> Self {
-        let shape = Shape::T(Rot4::Start);
-        Self {
-            blocks: new_blocks_for_offsets(&shape.block_offsets()),
-            shape: shape,
-        }
+        Self::new(Shape::T)
     }
 
 
@@ -223,14 +175,13 @@ impl Tetromino {
     }
 
     pub fn rotate_blocks(&mut self, dir: RotDir) {
-        let mut new_shape = self.shape.rotate(dir);
+        let new_rot = self.rot.rotate(dir);
         let origin = &self.origin();
-        self.new_shape_origin(new_shape, origin);
+        self.new_rot_origin(new_rot, origin);
     }
 
     pub fn reset_pos_rot(&mut self, new_origin: &Trans2D) {
-        let mut new_shape = self.shape.default_rotation();
-        self.new_shape_origin(new_shape, new_origin);
+        self.new_rot_origin(Rot4::Start, new_origin);
     }
 
     pub fn blocks(&self) -> &[Block; 4] {
@@ -238,18 +189,17 @@ impl Tetromino {
     }
 
     fn origin(&self) -> Trans2D {
-        let cur_offsets = self.shape.block_offsets();
+        let cur_offsets = block_offsets(&self.shape, &self.rot);
         let b = self.blocks[0].pos();
         let c = &cur_offsets[0];
         b.trans(&c.invert())
     }
 
-    fn new_shape_origin(&mut self, new_shape: Shape, new_origin: &Trans2D) {
-        let old_origin = self.origin();
-        let new_offsets = new_shape.block_offsets();
+    fn new_rot_origin(&mut self, new_rot: Rot4, new_origin: &Trans2D) {
+        let new_offsets = block_offsets(&self.shape, &new_rot);
         for i in 0..4 {
             self.blocks[i].jump_to(&new_offsets[i], new_origin);
         }
-        self.shape = new_shape;
+        self.rot = new_rot;
     }
 }
