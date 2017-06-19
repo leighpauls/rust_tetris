@@ -4,11 +4,14 @@ mod block;
 mod field;
 mod tetronimo;
 mod trans2d;
+mod shape;
+mod shape_bag;
 
 extern crate glutin_window;
 extern crate graphics;
 extern crate opengl_graphics;
 extern crate piston;
+extern crate rand;
 
 use piston::window::WindowSettings;
 use piston::event_loop::{Events, EventSettings};

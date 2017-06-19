@@ -3,6 +3,7 @@ use graphics::Context;
 use field::FieldDrawParams;
 use opengl_graphics::GlGraphics;
 use trans2d::Trans2D;
+use shape::Shape;
 
 pub enum RotDir {
     CW,
@@ -35,19 +36,8 @@ impl Rot4 {
                     &Rot4::CW => Rot4::Start,
                 }
             }
-
         }
     }
-}
-
-enum Shape {
-    O,
-    I,
-    Z,
-    S,
-    L,
-    J,
-    T,
 }
 
 fn new_blocks_for_offsets(offsets: &[Trans2D; 4]) -> [Block; 4] {
@@ -125,7 +115,7 @@ fn block_offsets(shape: &Shape, rot: &Rot4) -> [Trans2D; 4] {
 }
 
 impl Tetromino {
-    fn new(shape: Shape) -> Self {
+    pub fn new(shape: Shape) -> Self {
         let rot = Rot4::Start;
         Self {
             blocks: new_blocks_for_offsets(&block_offsets(&shape, &rot)),
@@ -133,29 +123,6 @@ impl Tetromino {
             rot: rot,
         }
     }
-
-    pub fn new_o() -> Self {
-        Self::new(Shape::O)
-    }
-    pub fn new_i() -> Self {
-        Self::new(Shape::I)
-    }
-    pub fn new_z() -> Self {
-        Self::new(Shape::Z)
-    }
-    pub fn new_s() -> Self {
-        Self::new(Shape::S)
-    }
-    pub fn new_l() -> Self {
-        Self::new(Shape::L)
-    }
-    pub fn new_j() -> Self {
-        Self::new(Shape::J)
-    }
-    pub fn new_t() -> Self {
-        Self::new(Shape::T)
-    }
-
 
     pub fn draw(&self, c: &Context, params: &FieldDrawParams, gl: &mut GlGraphics) {
         for block in &self.blocks {

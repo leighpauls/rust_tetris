@@ -6,6 +6,7 @@ use tetronimo::Tetromino;
 use graphics::Context;
 use opengl_graphics::GlGraphics;
 use tetronimo::RotDir;
+use shape_bag::ShapeBag;
 
 use trans2d::Trans2D;
 use BLACK;
@@ -61,6 +62,7 @@ pub struct Field {
     cur_tet: Option<Tetromino>,
     stash_tet: Option<Tetromino>,
     preview_tets: Vec<Tetromino>,
+    shape_bag: ShapeBag,
 }
 
 fn main_block_start_pos() -> Trans2D {
@@ -82,12 +84,13 @@ impl Field {
             cur_tet: None,
             stash_tet: None,
             preview_tets: vec![],
+            shape_bag: ShapeBag::new(),
         }
     }
 
     pub fn init_field(&mut self) {
         for _ in 0..5 {
-            let mut new_tet = Tetromino::new_l();
+            let mut new_tet = self.new_tet();
             new_tet.jump_to(&preview_block_start_pos());
             self.preview_tets.push(new_tet);
         }
@@ -103,7 +106,7 @@ impl Field {
         new_block.jump_to(&main_block_start_pos());
         self.cur_tet = Some(new_block);
 
-        let mut new_preview = Tetromino::new_o();
+        let mut new_preview = self.new_tet();
         new_preview.jump_to(&preview_block_start_pos());
         self.preview_tets.push(new_preview);
     }
@@ -138,6 +141,10 @@ impl Field {
         if let Some(ref mut t) = self.cur_tet {
             t.rotate_blocks(dir);
         }
+    }
+
+    fn new_tet(&mut self) -> Tetromino {
+        Tetromino::new(self.shape_bag.next_shape())
     }
 }
 
