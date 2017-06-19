@@ -23,9 +23,11 @@ pub struct App {
 
 impl App {
     pub fn new(opengl: OpenGL) -> App {
+        let mut field = Field::new();
+        field.init_field();
         App {
             gl: GlGraphics::new(opengl),
-            field: Field::new(),
+            field: field,
         }
     }
 

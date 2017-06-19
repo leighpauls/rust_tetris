@@ -60,6 +60,7 @@ pub struct Field {
     blocks: Vec<Block>,
     cur_tet: Option<Tetromino>,
     stash_tet: Option<Tetromino>,
+    preview_tets: Vec<Tetromino>,
 }
 
 fn main_block_start_pos() -> Trans2D {
@@ -80,16 +81,31 @@ impl Field {
             blocks: vec![],
             cur_tet: None,
             stash_tet: None,
+            preview_tets: vec![],
         }
     }
 
+    pub fn init_field(&mut self) {
+        for i in 0..5 {
+            let mut new_tet = Tetromino::new_t();
+            new_tet.jump_to(&preview_block_start_pos());
+            self.preview_tets.push(new_tet);
+        }
+        self.new_cur_tetromino();
+    }
+
     pub fn new_cur_tetromino(&mut self) {
-        if let Some(ref t) = self.cur_tet {
+        if let Some(t) = self.cur_tet.take() {
             self.blocks.extend_from_slice(t.blocks());
         }
-        let mut new_block = Tetromino::new_t();
+
+        let mut new_block = self.preview_tets.remove(0);
         new_block.jump_to(&main_block_start_pos());
         self.cur_tet = Some(new_block);
+
+        let mut new_preview = Tetromino::new_o();
+        new_preview.jump_to(&preview_block_start_pos());
+        self.preview_tets.push(new_preview);
     }
 
     pub fn stash_tetromino(&mut self) {
@@ -148,6 +164,8 @@ impl Field {
         for preview_idx in 0..5 {
             let preview_params = FieldDrawParams::new_preview(render_args, preview_idx);
             self.draw_field_lines(c, gl, &preview_params);
+            let t = &self.preview_tets[preview_idx as usize];
+            t.draw(c, &preview_params, gl);
         }
     }
 

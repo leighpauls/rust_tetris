@@ -139,9 +139,17 @@ pub struct Tetromino {
 }
 
 impl Tetromino {
-    pub fn new_t() -> Tetromino {
+    pub fn new_t() -> Self {
         let shape = Shape::T(Rot4::Start);
-        Tetromino {
+        Self {
+            blocks: new_blocks_for_offsets(&shape.block_offsets()),
+            shape: shape,
+        }
+    }
+
+    pub fn new_o() -> Self {
+        let shape = Shape::O;
+        Self {
             blocks: new_blocks_for_offsets(&shape.block_offsets()),
             shape: shape,
         }
